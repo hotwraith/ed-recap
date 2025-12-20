@@ -6,7 +6,7 @@ from reader import journalReader
 from typeprinter import TypePrinter
 
 def main():
-    TYPE = TypePrinter()
+    TYPE = TypePrinter(typeSpeed=0.01)
     reader = journalReader()
     allLogs = reader.findLogs()
     sortedByCMDR = reader.sortLogsByCMDR(allLogs)
@@ -27,7 +27,8 @@ def main():
             #TYPE.clearConsole()
             TYPE.slowType("Please select a valid option!")
     hotwraith_logs = reader.sortLogsYear(sortedByCMDR[allCMDRS[choice]])
-    hotwrcp = CMDRecap(hotwraith_logs)
+    TYPE.clearConsole()
+    hotwrcp = CMDRecap(hotwraith_logs, CMDR_name=allCMDRS[choice])
 
 
 

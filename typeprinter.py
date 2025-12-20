@@ -4,9 +4,10 @@ import time
 import shutil
 
 class TypePrinter():
+    global speed
 
-    def __init__(self) -> None:
-        pass
+    def __init__(self, typeSpeed:float=0.05) -> None:
+        self.speed = typeSpeed
 
     def slowType(self, sentence:str) -> None:
         width = shutil.get_terminal_size().columns
@@ -19,7 +20,8 @@ class TypePrinter():
                 col = 0
             slow += char
             print(slow, end='\r')
-            time.sleep(0.05)
+            time.sleep(self.speed)
+            col +=1
         print("")
 
     def multipleSlowType(self, sentences:list[str]) -> None:
@@ -34,7 +36,7 @@ class TypePrinter():
                     col = 0
                 slow += char
                 print(slow, end='\r')
-                time.sleep(0.05)
+                time.sleep(self.speed)
                 col += 1
             print("")
 
@@ -52,6 +54,5 @@ class TypePrinter():
             i+=1
 
     def clearConsole(self) -> None:
-        sys.stdout.flush()
-
+        os.system('cls')
     
