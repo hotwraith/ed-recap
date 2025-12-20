@@ -306,10 +306,24 @@ class CMDRecap():
                                         })
                 
                 EXOBIO = 'Exobiology'
-                if(self.ODY):
+                try:
+                    get = log_begin[EXOBIO]["Organic_Data_Profits"]
+                    begin = True
+                except KeyError:
+                    begin = False
+                try:
+                    get = log_end[EXOBIO]["Organic_Data_Profits"]
+                    end = True
+                except KeyError:
+                    end = False
+                if(begin and end):
                     exobio_profit = log_end[EXOBIO]["Organic_Data_Profits"]-log_begin[EXOBIO]["Organic_Data_Profits"]
                     ff_profit = log_end[EXOBIO]["First_Logged_Profits"]-log_begin[EXOBIO]["First_Logged_Profits"]
                     ff_count = log_end[EXOBIO]["First_Logged"]-log_begin[EXOBIO]["First_Logged"]
+                elif(end):
+                    exobio_profit = log_end[EXOBIO]["Organic_Data_Profits"]
+                    ff_profit = log_end[EXOBIO]["First_Logged_Profits"]
+                    ff_count = log_end[EXOBIO]["First_Logged"]
                 else:
                     exobio_profit = 0
                     ff_profit = 0
@@ -413,7 +427,7 @@ class CMDRecap():
         return newNum
 
     def printRecap(self, CMDR_recap) -> None:
-        TYPE = TypePrinter()
+        TYPE = TypePrinter(typeSpeed=0.025)
         allFluff = []
         phrase = "Welcome to your Elite: Dangerous yearly recap"
         if(self.CMDR_name != None):
@@ -453,7 +467,7 @@ class CMDRecap():
     def printYear(self, CMDRC, year) -> None:
         musics = self.sortMusic(CMDRC["MUSIC"])
         PROGRESS = ProgressBar()
-        TYPE = TypePrinter()
+        TYPE = TypePrinter(typeSpeed=0.025)
         types = [
             f"This year of {year+1286} was a big year !",
             "You did a lot of things, let's review all of that shall we ?",
@@ -471,6 +485,9 @@ class CMDRecap():
         if(CMDRC["STATS"]["Bank_Account"]["SHIPS_NEW"] > 0):
             words.append("acquired")
             words.append("what did you use them for ?")
+        elif(CMDRC["STATS"]["Bank_Account"]["SHIPS_NEW"] > 0):
+            words.append("have bought a grand total of")
+            words.append("short on money CMDR ?")
         else:
             words.append("sold")
             words.append("were they collecting dust in a hangar ?")
@@ -539,6 +556,9 @@ class CMDRecap():
         lines = [
             "There are still wonders to uncover, and questions to solve, so we'll stop stealing your time here,",
             "and wish you nothing but the best in your future endeavours CMDR !",
-            "We hope you'll keep playing next year and, in the meantime, fly dangerously o7"
+            "We hope you'll keep playing next year and, in the meantime, fly dangerously o7",
+            " "
+            "Before going, the stat you've been waiting for, this year you played: ",
+            f"\033[1m{self.numberStrBuilder(CMDRC['STATS']['Exploration']['TOTAL_TIME']/3600)} hours\033[0m, that's \033[1m{self.numberStrBuilder(CMDRC['STATS']['Exploration']['TOTAL_TIME']/(3600*24))} days\033[0m !"
         ]
         TYPE.multipleSlowType(lines)
