@@ -65,7 +65,10 @@ class CMDRecap():
                 statsDict.update({year: {"STATS":{}}})
                 
                 log_begin = json.loads(scrappedData[year][loglist[0]][-1])
-                log_end = json.loads(scrappedData[year][loglist[-1]][-1])
+                try:
+                    log_end = json.loads(scrappedData[str(int(year)+1)][loglist[0]][-1])
+                except KeyError:
+                    log_end = json.loads(scrappedData[year][loglist[-1]][-1])
 
                 BANK = 'Bank_Account'
                 wealth_evo =  log_end[BANK]["Current_Wealth"]-log_begin[BANK]["Current_Wealth"]
