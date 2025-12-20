@@ -36,14 +36,18 @@ class journalReader():
         keepPhrase = "FID"
         logsCMDR = {}
         for el in logs:
-            with open(el, 'r') as f:
-                f_lines = f.readlines()
-                for line in f_lines:
-                    ser = re.findall('"Name":"([A-z]{1,})', line)
-                    if(keepPhrase in line and len(ser)>0):
-                        CMDR = ser[0]
-                        try:
-                            logsCMDR[CMDR].append(el)
-                        except KeyError:
-                            logsCMDR.update({CMDR:[el]})
+            with open(el, 'r', encoding='utf-8') as f:
+                try:
+                    f_lines = f.readlines()
+                    for line in f_lines:
+                        ser = re.findall('"Name":"([A-z]{1,})', line)
+                        if(keepPhrase in line and len(ser)>0):
+                            CMDR = ser[0]
+                            try:
+                                logsCMDR[CMDR].append(el)
+                            except KeyError:
+                                logsCMDR.update({CMDR:[el]})
+                except UnicodeDecodeError as e:
+                    #print(el, e)
+                    pass
         return logsCMDR
