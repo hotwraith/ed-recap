@@ -485,7 +485,7 @@ class CMDRecap():
         if(CMDRC["STATS"]["Bank_Account"]["SHIPS_NEW"] > 0):
             words.append("acquired")
             words.append("what did you use them for ?")
-        elif(CMDRC["STATS"]["Bank_Account"]["SHIPS_NEW"] > 0):
+        elif(CMDRC["STATS"]["Bank_Account"]["SHIPS_NEW"] == 0):
             words.append("have bought a grand total of")
             words.append("short on money CMDR ?")
         else:
