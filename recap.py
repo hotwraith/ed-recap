@@ -531,11 +531,16 @@ class CMDRecap():
             f"- {musics[2][1]}, {musics[2][0]} times",
             f"- {musics[3][1]}, {musics[3][0]} times",
             f"- {musics[4][1]}, {musics[4][0]} times",
-            " ",
-            "All of this made you progress through this galaxy, getting closer to the legends, let's see...",
-            " "
-        ]
+            " "]
         TYPE.multipleSlowType(types)
+        for key in list(CMDRC['RANKS'].keys()):
+            if(CMDRC['RANKS'][key][0] > 0):
+                types = [
+                    "All of this made you progress through this galaxy, getting closer to the legends, let's see...",
+                    " "
+                ]
+                TYPE.multipleSlowType(types)
+                break
         if(CMDRC['RANKS']['Empire'][0] > 0):
             TYPE.slowType(f"You've gained {CMDRC['RANKS']['Empire'][0]} ranks to the Empire this year, reaching the valued rank of {self.rank_dict["Empire"][CMDRC['RANKS']['Empire'][1]]} !")
         if(CMDRC['RANKS']['Federation'][0] > 0):
@@ -557,7 +562,7 @@ class CMDRecap():
             "There are still wonders to uncover, and questions to solve, so we'll stop stealing your time here,",
             "and wish you nothing but the best in your future endeavours CMDR !",
             "We hope you'll keep playing next year and, in the meantime, fly dangerously o7",
-            " "
+            " ",
             "Before going, the stat you've been waiting for, this year you played: ",
             f"\033[1m{self.numberStrBuilder(CMDRC['STATS']['Exploration']['TOTAL_TIME']/3600)} hours\033[0m, that's \033[1m{self.numberStrBuilder(CMDRC['STATS']['Exploration']['TOTAL_TIME']/(3600*24))} days\033[0m !"
         ]
