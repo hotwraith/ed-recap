@@ -20,7 +20,7 @@ class journalReader():
     
     def sortLogsYear(self, logs:list[str]) -> dict[int,list[str]]:
         sortedLogs = {}
-        toBeSorted = logs.copy()
+        toBeSorted = copy.deepcopy(logs)
         for i in range(2014, int(datetime.datetime.now().year)+1):
             remainder = []
             sortedLogs.update({i:[]})
@@ -29,24 +29,26 @@ class journalReader():
                     sortedLogs[i].append(log)
                 else:
                     remainder.append(log)
-            toBeSorted = remainder.copy()
+            toBeSorted = copy.deepcopy(remainder)
+        #print(len(sortedLogs[2023]))
         return sortedLogs
 
     def sortLogsByCMDR(self, logs:list[str]) -> dict[str, list[str]]:
-        keepPhrase = "FID"
+        keepPhrase = "LoadGame"
         logsCMDR = {}
         for el in logs:
             with open(el, 'r', encoding='utf-8') as f:
                 try:
                     f_lines = f.readlines()
                     for line in f_lines:
-                        ser = re.findall('"Name":"([A-z]{1,})', line)
-                        if(keepPhrase in line and len(ser)>0):
-                            CMDR = ser[0]
+                        if(keepPhrase in line):
+                            loaded_line = json.loads(line)
+                            CMDR = loaded_line['Commander']
                             try:
                                 logsCMDR[CMDR].append(el)
                             except KeyError:
                                 logsCMDR.update({CMDR:[el]})
+                            break
                 except UnicodeDecodeError as e:
                     #print(el, e)
                     pass

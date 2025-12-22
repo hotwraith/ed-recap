@@ -1,4 +1,5 @@
 import os
+import copy
 import glob
 import json
 import time
@@ -40,9 +41,15 @@ class CMDRecap():
         scrap_music = self.scrapJournals(["\"event\":\"Music\""])
         scrap_stats = self.scrapJournals(["\"event\":\"Statistics\""])
         scrap_rank = self.scrapJournals(["\"event\":\"Rank\"", "\"event\":\"Progress\""])
+        scrap_mission = self.scrapJournals(["\"event\":\"MissionAccepted\"", "\"event\":\"MissionFailed\"", "\"event\":\"MissionCompleted\"", "\"event\":\"MissionAbandoned\""])
+        scrap_jumps = self.scrapJournals(["\"event\":\"StartJump\", \"JumpType\":\"Hyperspace\""])
+        #scrap_jumps = self.scrapJournals(["\"event\":\"FSDJump\""])
+        #scrap_mission = self.scrapJournals(["\"event\":\"MissionAccepted\""])
         res_music = self.gatherMusic(scrap_music)
         res_stats = self.gatherStats(scrap_stats)
         res_rank = self.gatherRanks(scrap_rank)
+        res_mission = self.gatherMissions(scrap_mission)
+        res_jumps = self.gatherJumps(scrap_jumps)
         for year in list(self.CMDR_logs.keys()):
             if(year in list(res_music.keys()) or year in list(res_stats.keys()) or year in list(res_rank.keys())):
                 CMDR_recap.update({year:{}})
@@ -52,6 +59,10 @@ class CMDRecap():
                     CMDR_recap[year].update(res_music[year])
                 if(year in list(res_rank.keys())):
                     CMDR_recap[year].update(res_rank[year])
+                if(year in list(res_mission.keys())):
+                    CMDR_recap[year].update(res_mission[year])
+                if(year in list(res_jumps.keys())):
+                    CMDR_recap[year].update(res_jumps[year])
 
         #print(json.dumps(CMDR_recap, indent=4))
         return CMDR_recap
@@ -400,28 +411,75 @@ class CMDRecap():
                                        })
         return statsDict
 
+        '''
+        MissionAccepted     Mission_Mining_name (WMM) Mission_MassacreWing (massacre)
+        MissionCompleted
+        MissionAbandoned
+        MissionFailed
+        '''
+    def gatherMissions(self, scrappedData:dict[str, dict[str, list[str]]]) -> dict:
+        statsDict = {}
+        years = list(scrappedData.keys())
+        for year in years:
+            loglist = list(scrappedData[year].keys())
+            if(len(loglist) > 0):
+                statsDict.update({year: {"MISSIONS":{"MissionAccepted":0, "MissionCompleted":0, "MissionAbandoned":0, "MissionFailed":0, "Mission_Mining_name":0, "Mission_MassacreWing":0}}})
+                for logs in loglist:
+                    for mission in scrappedData[year][logs]:
+                        loaded_mission = json.loads(mission)['event']
+                        type_mission = json.loads(mission)['Name']
+                        try:
+                            statsDict[year]["MISSIONS"][loaded_mission] += 1
+                            if(type_mission == 'Mission_Mining_name' or type_mission == 'Mission_MassacreWing'):
+                                try:
+                                    statsDict[year]["MISSIONS"][type_mission] += 1
+                                except KeyError:
+                                    statsDict[year]["MISSIONS"].update({type_mission:1})
+                        except KeyError:
+                            statsDict[year]["MISSIONS"].update({loaded_mission:1})
+        return statsDict
+    
+    def gatherJumps(self, scrappedData:dict[str, dict[str, list[str]]]) -> dict:
+        statsDict = {}
+        years = list(scrappedData.keys())
+        for year in years:
+            loglist = list(scrappedData[year].keys())
+            if(len(loglist) > 0):
+                statsDict.update({year: {"JUMPS":{}}})
+                for logs in loglist:
+                    for mission in scrappedData[year][logs]:
+                        loaded_mission = json.loads(mission)['StarSystem']
+                        #type_mission = json.loads(mission)['Name']
+                        try:
+                            statsDict[year]["JUMPS"][loaded_mission] += 1
+                        except KeyError:
+                            statsDict[year]["JUMPS"].update({loaded_mission:1})
+        return statsDict
+
 
     def scrapJournals(self, keywords:list) -> dict[str, dict[str, list[str]]]:
         years = list(self.CMDR_logs.keys())
         scrapped = {}
+        copied_logs = copy.deepcopy(self.CMDR_logs)
         for el in years:
             scrapped.update({el: {}})
-            self.CMDR_logs[el].sort()
-            for log in self.CMDR_logs[el]:
+            #print(el, len(copied_logs[el]))
+            copied_logs[el].sort()
+            for log in copied_logs[el]:
                 with open(log, 'r', encoding='utf-8') as f:
                     lines = f.readlines()
                     f.close()
-                for l in lines:
+                for i in range(len(lines)):
                     for key in keywords:
-                        if(key in l):
+                        if(key in lines[i]):
                             try:
-                                scrapped[el][log].append(l)
+                                scrapped[el][log].append(lines[i])
                             except KeyError:
-                                scrapped[el].update({log: [l]})
+                                scrapped[el].update({log: [lines[i]]})
         return scrapped
 
-    def numberStrBuilder(self, number:float) -> str:
-        number = round(abs(number))
+    def numberStrBuilder(self, number:float, rounding:int=None) -> str: # type: ignore
+        number = round(abs(number), ndigits=rounding)
         newNum = format(number, ',')
         newNum = newNum.replace(',', '\'')
         return newNum
@@ -466,6 +524,7 @@ class CMDRecap():
 
     def printYear(self, CMDRC, year) -> None:
         musics = self.sortMusic(CMDRC["MUSIC"])
+        jumps = self.sortMusic(CMDRC["JUMPS"])
         PROGRESS = ProgressBar()
         TYPE = TypePrinter(typeSpeed=0.025)
         types = [
@@ -491,7 +550,7 @@ class CMDRecap():
         else:
             words.append("sold")
             words.append("were they collecting dust in a hangar ?")
-        if(CMDRC["STATS"]["Crime"]["BOUNTY_COUNT"] +CMDRC["STATS"]["Crime"]["FINE_COUNT"] > 20):
+        if(CMDRC["STATS"]["Crime"]["BOUNTY_COUNT"] +CMDRC["STATS"]["Crime"]["FINE_COUNT"] >= 10):
             words.append(" you criminal scum !")
         else:
             words.append(", what a lawful space citizen...")
@@ -505,34 +564,93 @@ class CMDRecap():
             f"You've {words[1]} {self.numberStrBuilder(CMDRC["STATS"]["Bank_Account"]["SHIPS_NEW"])} ships, {words[2]}",
             " ",
             f"You've been the target of {self.numberStrBuilder(CMDRC["STATS"]["Crime"]["FINE_COUNT"])} fines, {self.numberStrBuilder(CMDRC["STATS"]["Crime"]["BOUNTY_COUNT"])} bounties{words[3]}",
-            " ",
-            f"Across the year you've traded {self.numberStrBuilder(CMDRC["STATS"]["Trading"]["RESOURCES_TRADED"])} tons of commodities, totalizing a whooping {self.numberStrBuilder(CMDRC["STATS"]["Trading"]["MARKET_PROFIT"])} CR ! That's {self.numberStrBuilder(CMDRC["STATS"]["Trading"]["MARKET_PROFIT"]/CMDRC["STATS"]["Trading"]["RESOURCES_TRADED"])} CR/t on average.",
-            " ",
+            " "
+        ]
+        if(CMDRC["STATS"]["Trading"]["RESOURCES_TRADED"] >0 ):
+            types.extend([
+                f"Across the year you've traded {self.numberStrBuilder(CMDRC["STATS"]["Trading"]["RESOURCES_TRADED"])} tons of commodities, totalizing a whooping {self.numberStrBuilder(CMDRC["STATS"]["Trading"]["MARKET_PROFIT"])} CR ! That's {self.numberStrBuilder(CMDRC["STATS"]["Trading"]["MARKET_PROFIT"]/CMDRC["STATS"]["Trading"]["RESOURCES_TRADED"])} CR/t on average.",
+                " "
+            ])
+
+        types.extend([
             "Exploration is a key part of this universe, and you've done your part:",
-            f"- By visiting {self.numberStrBuilder(CMDRC["STATS"]["Exploration"]["SYSTEMS_NEW"])} new systems",
-            f"- Or selling {self.numberStrBuilder(CMDRC["STATS"]["Exploration"]["SYSTEMS_PROFIT"])} CR worth of cartographic data to Universal Cartographics !",
-            f"- You've traveled {self.numberStrBuilder(CMDRC["STATS"]["Exploration"]["TOTAL_DISTANCE"])} lys across {self.numberStrBuilder(CMDRC["STATS"]["Exploration"]["TOTAL_JUMPS"])} jumps, that's {self.numberStrBuilder(CMDRC["STATS"]["Exploration"]["TOTAL_DISTANCE"]/CMDRC["STATS"]["Exploration"]["TOTAL_JUMPS"])} lys/jump on average :eyes:",
-            f"- Finally you've ran, climbed or walked {self.numberStrBuilder(CMDRC["STATS"]["Exploration"]["TOTAL_DISTANCE_FOOT"])}m, that's {self.numberStrBuilder(CMDRC["STATS"]["Exploration"]["TOTAL_DISTANCE_FOOT"]/42000)} marathon(s).",
+            f"- By visiting {self.numberStrBuilder(CMDRC["STATS"]["Exploration"]["SYSTEMS_NEW"])} new systems"
+        ])
+        if(CMDRC["STATS"]["Exploration"]["SYSTEMS_PROFIT"] > 0):
+            types.append(f"- Or selling {self.numberStrBuilder(CMDRC["STATS"]["Exploration"]["SYSTEMS_PROFIT"])} CR worth of cartographic data to Universal Cartographics !")
+        
+        types.append(f"- You've traveled {self.numberStrBuilder(CMDRC["STATS"]["Exploration"]["TOTAL_DISTANCE"])} lys across {self.numberStrBuilder(CMDRC["STATS"]["Exploration"]["TOTAL_JUMPS"])} jumps, that's {self.numberStrBuilder(CMDRC["STATS"]["Exploration"]["TOTAL_DISTANCE"]/CMDRC["STATS"]["Exploration"]["TOTAL_JUMPS"], 1)} lys/jump on average :eyes:")
+        if(CMDRC["STATS"]["Exploration"]["TOTAL_DISTANCE_FOOT"] >0):
+            types.append(f"- Finally you've ran, climbed or walked {self.numberStrBuilder(CMDRC["STATS"]["Exploration"]["TOTAL_DISTANCE_FOOT"])}m, that's {self.numberStrBuilder(CMDRC["STATS"]["Exploration"]["TOTAL_DISTANCE_FOOT"]/42000, 2)} marathon(s).")
+        
+        types.extend([
             " ",
             f"We might have won the war but they still hang around, sharing this galaxy with us, this year you've met {self.numberStrBuilder(CMDRC["STATS"]["Thargoid"]["TG_ENCOUNTERS"])} 'Goids !",
+        ])
+
+        if(CMDRC["STATS"]["Crafting"]["ENGI_ROLLS"]):
+            types.extend([
             " ",
             f"A good ship is one that you made yours, and this year you've clicked {self.numberStrBuilder(CMDRC["STATS"]["Crafting"]["ENGI_ROLLS"])} times on the button \"Generate modification\" to upgrade your fleet.",
+            ])
+        if(CMDRC["STATS"]["Materials"]["MAT_COUNT"]):
+            types.extend([
             f"Engineering doesn't happen without materials, this year you've traded {self.numberStrBuilder(CMDRC["STATS"]["Materials"]["MAT_COUNT"])} materials across {self.numberStrBuilder(CMDRC["STATS"]["Materials"]["MAT_TRADES"])} trades.",
+            ])
+
+        types.extend([
             " ",
             f"This year you've hired {self.numberStrBuilder(CMDRC["STATS"]["Crew"]["CREW_HIRED"])} NPC crew, fired {self.numberStrBuilder(CMDRC["STATS"]["Crew"]["CREW_FIRED"])} and lost {self.numberStrBuilder(CMDRC["STATS"]["Crew"]["CREW_KIA"])} in the darkness of space...",
-            f"Despite your best efforts during contract negotatiation you've paid them {self.numberStrBuilder(CMDRC["STATS"]["Crew"]["CREW_WAGES"])} CR across the year.",
+        ])
+        if(CMDRC["STATS"]["Crew"]["CREW_WAGES"] > 0):
+            types.append(f"Despite your best efforts during contract negotatiation you've paid them {self.numberStrBuilder(CMDRC["STATS"]["Crew"]["CREW_WAGES"])} CR across the year.")
+        types.extend([
             f"This year you've played {self.numberStrBuilder(CMDRC["STATS"]["CQC"]["TIME_PLAYED"]/3600)} hours of CQC{words[4]}",
-            " ",
-            "A fleet carrier is a CMDR's pride, and most valuable asset (trit crew set aside), here's yours in numbers:",
-            f"- It jumped across {self.numberStrBuilder(CMDRC["STATS"]["FleetCarrier"]["TOTAL_DISTANCE"])} lys in about {self.numberStrBuilder(CMDRC["STATS"]["FleetCarrier"]["TOTAL_JUMPS"]*20/60)} hours (you could've used a ship ya know).",
-            f"- You've rearmed, refueled, and repaired CMDRs {self.numberStrBuilder(CMDRC["STATS"]["FleetCarrier"]["TOTAL_REARM"])}, {self.numberStrBuilder(CMDRC["STATS"]["FleetCarrier"]["TOTAL_REFUEL"])}, {self.numberStrBuilder(CMDRC["STATS"]["FleetCarrier"]["TOTAL_REPAIR"])} times respectively ! Thank you for your service o7",
+            " "
+        ])
+        if(CMDRC["STATS"]["FleetCarrier"]["TOTAL_DISTANCE"] > 0 or CMDRC["STATS"]["FleetCarrier"]["TOTAL_REARM"] > 0 or CMDRC["STATS"]["FleetCarrier"]["TOTAL_REFUEL"] > 0 or CMDRC["STATS"]["FleetCarrier"]["TOTAL_REPAIR"] > 0):
+            types.append("A fleet carrier is a CMDR's pride, and most valuable asset (trit crew set aside), here's yours in numbers:")
+            if(CMDRC["STATS"]["FleetCarrier"]["TOTAL_DISTANCE"] > 0):
+                types.append(f"- It jumped across {self.numberStrBuilder(CMDRC["STATS"]["FleetCarrier"]["TOTAL_DISTANCE"])} lys in about {self.numberStrBuilder(CMDRC["STATS"]["FleetCarrier"]["TOTAL_JUMPS"]*20/60)} hours (you could've used a ship ya know).")
+            if(CMDRC["STATS"]["FleetCarrier"]["TOTAL_REARM"] > 0 or CMDRC["STATS"]["FleetCarrier"]["TOTAL_REFUEL"] > 0 or CMDRC["STATS"]["FleetCarrier"]["TOTAL_REPAIR"] > 0):
+                types.append(f"- You've rearmed, refueled, and repaired CMDRs {self.numberStrBuilder(CMDRC["STATS"]["FleetCarrier"]["TOTAL_REARM"])}, {self.numberStrBuilder(CMDRC["STATS"]["FleetCarrier"]["TOTAL_REFUEL"])}, {self.numberStrBuilder(CMDRC["STATS"]["FleetCarrier"]["TOTAL_REPAIR"])} times respectively ! Thank you for your service o7")
+        types.extend([
             " ",
             "A game is also its music... You've listened, we took note, here are the three themes you've listened to the most:",
             f"- {musics[2][1]}, {musics[2][0]} times",
             f"- {musics[3][1]}, {musics[3][0]} times",
             f"- {musics[4][1]}, {musics[4][0]} times",
-            " "]
+            " "])
         TYPE.multipleSlowType(types)
+
+        if("MISSIONS" in list(CMDRC.keys())):
+            if(CMDRC["MISSIONS"]["MissionAccepted"] > 0):
+                TYPE.slowType('You\'ve spent some time doing missions, here\'s how that breaks down in numbers:')
+                slines = [
+                        f'- {CMDRC["MISSIONS"]["MissionAccepted"]} accepted', 
+                        f'- {CMDRC["MISSIONS"]["MissionCompleted"]} completed', 
+                        f'- {CMDRC["MISSIONS"]["MissionAbandoned"]} abandoned', 
+                        f'- {CMDRC["MISSIONS"]["MissionFailed"]} failed',
+                        f'- Among those, {CMDRC["MISSIONS"]["Mission_Mining_name"]} were Wing Mining Missions and {CMDRC["MISSIONS"]["Mission_MassacreWing"]} were Wing Massacre Missions.'
+                        ]
+                TYPE.multipleSlowType(slines)
+
+        jump_text = [
+            " ",
+            "You've jumped, jumped, and jumped... here are your three favourite destinations of the year:",
+            f"- {jumps[0][1]}, {jumps[0][0]} times",
+            f"- {jumps[1][1]}, {jumps[1][0]} times",
+            f"- {jumps[2][1]}, {jumps[2][0]} times",
+            " "]
+        TYPE.multipleSlowType(jump_text)
+        
+        '''
+        tot = 0
+        for el in jumps:
+            tot += int(el[0])
+        print(f"Total number of jumps: {tot}")
+        '''
+        
         for key in list(CMDRC['RANKS'].keys()):
             if(CMDRC['RANKS'][key][0] > 0):
                 types = [
