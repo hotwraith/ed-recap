@@ -524,7 +524,8 @@ class CMDRecap():
 
     def printYear(self, CMDRC, year) -> None:
         musics = self.sortMusic(CMDRC["MUSIC"])
-        jumps = self.sortMusic(CMDRC["JUMPS"])
+        if("JUMPS" in list(CMDRC.keys())):
+            jumps = self.sortMusic(CMDRC["JUMPS"])
         PROGRESS = ProgressBar()
         TYPE = TypePrinter(typeSpeed=0.025)
         types = [
@@ -634,15 +635,15 @@ class CMDRecap():
                         f'- Among those, {CMDRC["MISSIONS"]["Mission_Mining_name"]} were Wing Mining Missions and {CMDRC["MISSIONS"]["Mission_MassacreWing"]} were Wing Massacre Missions.'
                         ]
                 TYPE.multipleSlowType(slines)
-
-        jump_text = [
-            " ",
-            "You've jumped, jumped, and jumped... here are your three favourite destinations of the year:",
-            f"- {jumps[0][1]}, {jumps[0][0]} times",
-            f"- {jumps[1][1]}, {jumps[1][0]} times",
-            f"- {jumps[2][1]}, {jumps[2][0]} times",
-            " "]
-        TYPE.multipleSlowType(jump_text)
+        if("JUMPS" in list(CMDRC.keys())):
+            jump_text = [
+                " ",
+                "You've jumped, jumped, and jumped... here are your three favourite destinations of the year:",
+                f"- {jumps[0][1]}, {jumps[0][0]} times",
+                f"- {jumps[1][1]}, {jumps[1][0]} times",
+                f"- {jumps[2][1]}, {jumps[2][0]} times",
+                " "]
+            TYPE.multipleSlowType(jump_text)
         
         '''
         tot = 0
