@@ -686,3 +686,5 @@ class CMDRecap():
             f"\033[1m{self.numberStrBuilder(CMDRC['STATS']['Exploration']['TOTAL_TIME']/3600)} hours\033[0m, that's \033[1m{self.numberStrBuilder(CMDRC['STATS']['Exploration']['TOTAL_TIME']/(3600*24))} days\033[0m !"
         ]
         TYPE.multipleSlowType(lines)
+        TYPE.slowType("Press enter to continue...")
+        input()
